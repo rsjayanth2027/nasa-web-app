@@ -9,9 +9,12 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [wakeUpLoading, setWakeUpLoading] = useState(false);
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://nasa-web-app-cxjn.onrender.com'; //for auto  wake
 
   // Dynamic backend URL - works for both local and production
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  //const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
   useEffect(() => {
     checkBackendHealth();
