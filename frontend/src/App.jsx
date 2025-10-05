@@ -11,10 +11,7 @@ function App() {
   const [backendStatus, setBackendStatus] = useState('checking');
   const [wakeUpLoading, setWakeUpLoading] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://nasa-web-app-cxjn.onrender.com'; //for auto  wake
-
-  // Dynamic backend URL - works for both local and production
-  //const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://nasa-web-app-cxjn.onrender.com';
 
   useEffect(() => {
     checkBackendHealth();
@@ -24,20 +21,60 @@ function App() {
     try {
       console.log(`🔍 Checking backend health at: ${BACKEND_URL}/api/health`);
       const response = await axios.get(`${BACKEND_URL}/api/health`, { 
-        timeout: 5000 
+        timeout: 10000 
       });
       setBackendStatus('connected');
+      setError('');
       console.log('✅ Backend connected:', response.data);
     } catch (err) {
-      console.error('❌ Backend connection failed:', err.message);
-      setBackendStatus('disconnected');
-      setError(`Backend server is not running. Please start the backend server locally.`);
+      console.error('❌ Backend health check failed:', err.message);
+      
+      if (err.code === 'ECONNREFUSED' || err.message.includes('timeout')) {
+        setBackendStatus('sleeping');
+        setError('Server is sleeping. Click "Wake Up Server" to start it.');
+      } else {
+        setBackendStatus('disconnected');
+        setError('Backend server is offline. Click "Wake Up Server" to start it.');
+      }
+    }
+  };
+
+  const wakeUpServer = async () => {
+    setWakeUpLoading(true);
+    setError('Waking up server... This may take 30-60 seconds.');
+    
+    try {
+      console.log('🔄 Attempting to wake up server...');
+      
+      const response = await axios.get(`${BACKEND_URL}/api/health`, {
+        timeout: 45000
+      });
+      
+      console.log('✅ Server response:', response.data);
+      setBackendStatus('connected');
+      setError('');
+      setWakeUpLoading(false);
+      
+    } catch (err) {
+      console.log('🔄 Server is waking up slowly, will auto-retry...');
+      
+      setTimeout(() => {
+        checkBackendHealth();
+      }, 10000);
+      
+      setWakeUpLoading(false);
     }
   };
 
   const analyzeData = async () => {
     if (!location.trim()) {
       setError('Please enter a location');
+      return;
+    }
+
+    if (backendStatus === 'sleeping' || backendStatus === 'disconnected') {
+      setError('Server is sleeping. Waking it up first...');
+      await wakeUpServer();
       return;
     }
 
@@ -66,7 +103,7 @@ function App() {
       console.log(`🔄 Fetching from: ${fullUrl}`);
       
       const response = await axios.get(fullUrl, { 
-        timeout: 15000 
+        timeout: 30000 
       });
       
       console.log('✅ Response received:', response.data);
@@ -81,11 +118,11 @@ function App() {
       const errorMessage = err.response?.data?.error || 
                           err.response?.data?.details || 
                           err.message || 
-                          'Failed to fetch data. Make sure backend is running.';
+                          'Failed to fetch data.';
       setError(errorMessage);
       
-      if (err.code === 'NETWORK_ERROR' || err.code === 'ECONNREFUSED') {
-        setBackendStatus('disconnected');
+      if (err.code === 'ECONNREFUSED') {
+        setBackendStatus('sleeping');
       }
     } finally {
       setLoading(false);
@@ -93,8 +130,6 @@ function App() {
   };
 
   const quickTestLocations = ['Delhi', 'Mumbai', 'Chennai', 'Bangalore', 'Kolkata', 'Hyderabad'];
-
-  // ========== RENDER METHODS ==========
 
   const renderTravelResults = () => {
     if (!results?.analysis) return null;
@@ -108,7 +143,6 @@ function App() {
           </div>
         </div>
 
-        {/* Best Travel Months */}
         {results.analysis.bestTravelMonths && results.analysis.bestTravelMonths.length > 0 && (
           <div className="best-months">
             <h4>🌟 Best Months to Visit</h4>
@@ -127,7 +161,6 @@ function App() {
           </div>
         )}
 
-        {/* Recommendations */}
         {results.analysis.recommendations && results.analysis.recommendations.length > 0 && (
           <div className="recommendations">
             <h4>💡 Travel Recommendations</h4>
@@ -160,7 +193,6 @@ function App() {
           </div>
         </div>
 
-        {/* Yield Potential */}
         {results.analysis.yieldPotential && (
           <div className="yield-potential">
             <h4>📈 Yield Potential Analysis</h4>
@@ -178,7 +210,6 @@ function App() {
           </div>
         )}
 
-        {/* Planting Schedule */}
         {results.analysis.plantingSchedule && (
           <div className="planting-schedule">
             <h4>📅 Planting Schedule</h4>
@@ -215,7 +246,6 @@ function App() {
           </div>
         )}
 
-        {/* Recommendations */}
         {results.analysis.recommendations && results.analysis.recommendations.length > 0 && (
           <div className="recommendations">
             <h4>💡 Farming Recommendations</h4>
@@ -248,7 +278,6 @@ function App() {
           </div>
         </div>
 
-        {/* Solar Potential */}
         {results.analysis.annualPotential && (
           <div className="solar-potential">
             <h4>📊 Solar Resource Assessment</h4>
@@ -277,7 +306,6 @@ function App() {
           </div>
         )}
 
-        {/* Financial Analysis */}
         {results.analysis.financialAnalysis && (
           <div className="financial-analysis">
             <h4>💰 Financial Analysis ({results.analysis.financialAnalysis.systemSize} kW System)</h4>
@@ -306,7 +334,6 @@ function App() {
           </div>
         )}
 
-        {/* Recommendations */}
         {results.analysis.recommendations && results.analysis.recommendations.length > 0 && (
           <div className="recommendations">
             <h4>💡 Solar Installation Recommendations</h4>
@@ -342,7 +369,6 @@ function App() {
           </div>
         </div>
 
-        {/* Disaster Probabilities */}
         {results.riskAnalysis.disasterProbabilities && (
           <div className="disaster-probabilities">
             <h4>🌪️ Disaster Risk Probabilities</h4>
@@ -365,7 +391,6 @@ function App() {
           </div>
         )}
 
-        {/* Preparedness */}
         {results.riskAnalysis.preparedness && results.riskAnalysis.preparedness.length > 0 && (
           <div className="preparedness">
             <h4>🛡️ Preparedness Recommendations</h4>
@@ -388,7 +413,6 @@ function App() {
 
   return (
     <div className="app">
-      {/* Keep your existing JSX structure exactly as it was */}
       <div className="space-background">
         <div className="stars"></div>
         <div className="twinkling"></div>
@@ -404,14 +428,16 @@ function App() {
             </div>
           </div>
           <div className={`status ${backendStatus}`}>
-            {backendStatus === 'connected' ? '🟢 Systems Online' : '🔴 Systems Offline'}
+            {backendStatus === 'connected' ? '🟢 Systems Online' : 
+             backendStatus === 'sleeping' ? '🟡 Server Sleeping' : 
+             backendStatus === 'waking-up' ? '🟡 Waking Up...' : 
+             '🔴 Systems Offline'}
             <div className="backend-url">Backend: {BACKEND_URL}</div>
           </div>
         </div>
       </header>
 
       <main className="main-content">
-        {/* Keep all your existing main content JSX */}
         <div className="mission-control">
           <h2>🌌 Mission Control</h2>
           <p>Analyze climate data for any location on Earth</p>
@@ -448,7 +474,7 @@ function App() {
               />
               <button
                 onClick={analyzeData}
-                disabled={loading || !location.trim() || backendStatus !== 'connected'}
+                disabled={loading || !location.trim() || backendStatus === 'sleeping' || backendStatus === 'disconnected'}
                 className="analyze-button"
               >
                 {loading ? (
@@ -488,21 +514,36 @@ function App() {
           <div className="error-message">
             <div className="error-icon">⚠️</div>
             <div className="error-content">
-              <strong>Connection Error</strong>
+              <strong>
+                {backendStatus === 'sleeping' ? 'Server Asleep' : 'Connection Error'}
+              </strong>
               <p>{error}</p>
-              {backendStatus === 'disconnected' && (
+              
+              {(backendStatus === 'disconnected' || backendStatus === 'sleeping') && (
                 <div className="troubleshooting">
-                  <p><strong>To fix this:</strong></p>
-                  <ol>
-                    <li>Open terminal in the <code>backend</code> folder</li>
-                    <li>Run: <code>npm install</code></li>
-                    <li>Run: <code>node server.js</code></li>
-                    <li>Wait for "Server running on port 5000" message</li>
-                    <li>Then refresh this page</li>
-                  </ol>
-                  <button onClick={checkBackendHealth} className="retry-button">
-                    🔄 Retry Connection
+                  <p><strong>Free hosting alert:</strong> Server sleeps after 15 minutes of inactivity</p>
+                  
+                  <button 
+                    onClick={wakeUpServer}
+                    disabled={wakeUpLoading}
+                    className="wake-up-button"
+                  >
+                    {wakeUpLoading ? (
+                      <>
+                        <div className="button-spinner"></div>
+                        <span>Waking Up Server...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔔 Wake Up Server</span>
+                      </>
+                    )}
                   </button>
+                  
+                  <div className="server-info">
+                    <p>⏱️ Takes 30-60 seconds to start</p>
+                    <p>🔄 Will auto-retry once awake</p>
+                  </div>
                 </div>
               )}
             </div>
