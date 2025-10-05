@@ -1,0 +1,21 @@
+nasa-climate-assistant/
+├── frontend/
+│   ├── public/
+│   ├── src/ and app.css and app.jsx and index.css and main.jsx
+│   │   ├── components/---- header.jsx
+│   │   ├── pages/-----agriculture.jsx and home.jsx and risk.jsx and solar.jsx and travel.jsx
+│   │   ├── services/
+│   │   └── utils/
+│   └── package.json and index.html and package-lock.json and tailwind.config.js and vite.config.js
+├── backend/
+│   ├── routes/-----agriculture.js and risk.js and solar.js and travel.js
+│   ├── services/---agricultureService.js and riskService.js and solarService.js and TravelService.js
+│   ├── models/
+│   ├── utils/
+│   └── package-lock.json
+|   └── package.json
+|   └── server.js
+├── package.json
+└── .env
+└── package-lock.json
+└── railway.json
